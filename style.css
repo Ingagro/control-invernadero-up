@@ -26,7 +26,7 @@ body {
 	padding: 0;
 	font-family: "Roboto", "Segoe UI", Tahoma, Geneva, Verdana,
 		sans-serif;
-	background: url("public/assets/background.jpg") center/cover
+	background: url("assets/background.jpg") center/cover
 		fixed no-repeat;
 	color: var(--color-dark);
 	min-height: 100vh;
