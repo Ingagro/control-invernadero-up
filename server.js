@@ -291,7 +291,6 @@ app.get("/", (req, res) => {
 	);
 });
 
-
 app.get("/index.html", requireAuth, (req, res) => {
 	res.sendFile(
 		path.join(__dirname, "public", "index.html")
@@ -299,20 +298,9 @@ app.get("/index.html", requireAuth, (req, res) => {
 });
 
 // Rutas públicas
-app.get("/login.html", (req, res) => {
-	// Si ya está autenticado, redirigir al dashboard
-	const token = req.cookies.token;
-	if (token) {
-		try {
-			jwt.verify(token, JWT_SECRET);
-			return res.redirect("/");
-		} catch (error) {
-			// Token inválido, continuar mostrando login
-			res.clearCookie("token");
-		}
-	}
+app.get("/index.html", (req, res) => {
 	res.sendFile(
-		path.join(__dirname, "public", "login.html")
+		path.join(__dirname, "public", "index.html")
 	);
 });
 
