@@ -38,6 +38,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname)));
+app.use("/assets", express.static("assets"));
 
 // Middleware para verificar JWT
 const verifyToken = (req, res, next) => {
@@ -221,12 +222,10 @@ app.post("/api/auth/change-password", async (req, res) => {
 				.json({ error: "Todos los campos son requeridos" });
 		}
 		if (newPassword.length < 6) {
-			return res
-				.status(400)
-				.json({
-					error:
-						"La nueva contraseña debe tener al menos 6 caracteres",
-				});
+			return res.status(400).json({
+				error:
+					"La nueva contraseña debe tener al menos 6 caracteres",
+			});
 		}
 		// Buscar usuario
 		const userQuery =
