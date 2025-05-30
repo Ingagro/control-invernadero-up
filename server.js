@@ -276,11 +276,21 @@ app.post("/api/auth/change-password", async (req, res) => {
 });
 
 // Rutas protegidas - requieren autenticación
-app.get("/", requireAuth, (req, res) => {
+app.get("/", (req, res) => {
+	const token = req.cookies.token;
+	if (token) {
+		try {
+			jwt.verify(token, JWT_SECRET);
+			return res.redirect("/index.html");
+		} catch (error) {
+			res.clearCookie("token");
+		}
+	}
 	res.sendFile(
 		path.join(__dirname, "public", "login.html")
 	);
 });
+
 
 app.get("/index.html", requireAuth, (req, res) => {
 	res.sendFile(
