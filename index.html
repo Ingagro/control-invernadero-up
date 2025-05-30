@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Control de Invernadero | Universidad de Pamplona</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:400,500&display=swap" rel="stylesheet">
+  <link rel="icon" href="assets/icon.jpg" type="image/png">
+</head>
+
+<body>
+  <div class="container">
+    <!-- Header con información del usuario y logout -->
+    <div class="auth-header">
+      <div class="user-info">
+        <span>Bienvenido, <span id="userName">Usuario</span></span>
+      </div>
+      <button id="logoutBtn" class="logout-btn">Cerrar Sesión</button>
+    </div>
+
+    <h1>🌱 Monitoreo y Control de Invernadero 🌿</h1>
+
+    <div class="datos">
+      <h2>Datos en Tiempo Real</h2>
+      <div class="sensors-grid">
+        <div class="sensor-item">
+          <p><strong>Temperatura 1:</strong> <span id="temp1">--</span></p>
+        </div>
+        <div class="sensor-item">
+          <p><strong>Temperatura 2:</strong> <span id="temp2">--</span></p>
+        </div>
+        <div class="sensor-item">
+          <p><strong>Humedad Relativa 1:</strong> <span id="hum1">--</span></p>
+        </div>
+        <div class="sensor-item">
+          <p><strong>Humedad Relativa 2:</strong> <span id="hum2">--</span></p>
+        </div>
+        <div class="sensor-item">
+          <p><strong>Humedad de Suelo 1:</strong> <span id="suelo1">--</span></p>
+        </div>
+        <div class="sensor-item">
+          <p><strong>Humedad de Suelo 2:</strong> <span id="suelo2">--</span></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="control">
+      <div class="modo">
+        <h2>Modo de Operación</h2>
+        <div class="select-container">
+          <label for="modoSelect">Selecciona el modo:</label>
+          <select id="modoSelect" onchange="cambiarModo()">
+            <option value="auto">Automático</option>
+            <option value="manual">Manual</option>
+          </select>
+        </div>
+      </div>
+
+      <h2>Control Manual</h2>
+
+      <div class="control-group">
+        <h3>Nebulizadores</h3>
+        <div class="button-group">
+          <button onclick="enviarControl('nebulizadores', 'ON')">Encender</button>
+          <button onclick="enviarControl('nebulizadores', 'OFF')">Apagar</button>
+        </div>
+        <p>Estado: <span id="estadoNebulizadores">--</span></p>
+      </div>
+
+      <div class="control-group">
+        <h3>Ventiladores</h3>
+        <div class="button-group">
+          <button onclick="enviarControl('ventiladores', 'ON')">Encender</button>
+          <button onclick="enviarControl('ventiladores', 'OFF')">Apagar</button>
+        </div>
+        <p>Estado: <span id="estadoVentiladores">--</span></p>
+      </div>
+
+      <div class="control-group">
+        <h3>Extractor</h3>
+        <div class="button-group">
+          <button onclick="enviarControl('extractor', 'ON')">Encender</button>
+          <button onclick="enviarControl('extractor', 'OFF')">Apagar</button>
+        </div>
+        <p>Estado: <span id="estadoExtractor">--</span></p>
+      </div>
+    </div>
+  </div>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script>
+    // Verificar autenticación al cargar la página
+    async function verificarAuth() {
+      try {
+        const response = await fetch('/api/auth/verify');
+        if (response.ok) {
+          const data = await response.json();
+          document.getElementById('userName').textContent = data.user.nombre || data.user.email;
+        } else {
+          // No autenticado, redirigir a login
+          window.location.href = '/login.html';
+        }
+      } catch (error) {
+        console.error('Error verificando autenticación:', error);
+        window.location.href = '/login.html';
+      }
+    }
+
+    // Función para cerrar sesión
+    async function logout() {
+      try {
+        const response = await fetch('/api/auth/logout', {
+          method: 'POST'
+        });
+
+        if (response.ok) {
+          window.location.href = '/login.html';
+        } else {
+          console.error('Error al cerrar sesión');
+        }
+      } catch (error) {
+        console.error('Error al cerrar sesión:', error);
+        // Forzar redirect a login en caso de error
+        window.location.href = '/login.html';
+      }
+    }
+
+    // Event listener para el botón de logout
+    document.getElementById('logoutBtn').addEventListener('click', logout);
+
+    // Verificar autenticación al cargar la página
+    verificarAuth();
+  </script>
+  <script src="js/app.js"></script>
+</body>
+
+</html>
