@@ -37,15 +37,19 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, "public")));
-app.use(
-	"/assets",
-	express.static(path.join(__dirname, "public", "assets"))
-);
-app.use(
-	"/js",
-	express.static(path.join(__dirname, "public", "js"))
-);
+
+// Static files middleware - only for local development
+if (process.env.NODE_ENV !== "production") {
+	app.use(express.static(path.join(__dirname, "public")));
+	app.use(
+		"/assets",
+		express.static(path.join(__dirname, "public", "assets"))
+	);
+	app.use(
+		"/js",
+		express.static(path.join(__dirname, "public", "js"))
+	);
+}
 
 // Middleware para verificar JWT
 const verifyToken = (req, res, next) => {
@@ -87,7 +91,7 @@ const requireAuth = (req, res, next) => {
 	}
 };
 
-// Rutas de autenticación
+// Authentication routes
 app.post("/api/auth/login", async (req, res) => {
 	try {
 		const { email, password } = req.body;
@@ -98,7 +102,6 @@ app.post("/api/auth/login", async (req, res) => {
 			});
 		}
 
-		// Buscar usuario en la base de datos
 		const userQuery =
 			"SELECT * FROM usuarios WHERE email = $1";
 		const userResult = await pool.query(userQuery, [email]);
@@ -110,8 +113,6 @@ app.post("/api/auth/login", async (req, res) => {
 		}
 
 		const user = userResult.rows[0];
-
-		// Verificar contraseña
 		const isValidPassword = await bcrypt.compare(
 			password,
 			user.password
@@ -123,7 +124,6 @@ app.post("/api/auth/login", async (req, res) => {
 			});
 		}
 
-		// Generar JWT
 		const token = jwt.sign(
 			{
 				id: user.id,
@@ -134,12 +134,11 @@ app.post("/api/auth/login", async (req, res) => {
 			{ expiresIn: "24h" }
 		);
 
-		// Configurar cookie con el token
 		res.cookie("token", token, {
 			httpOnly: true,
 			secure: process.env.NODE_ENV === "production",
 			sameSite: "strict",
-			maxAge: 24 * 60 * 60 * 1000, // 24 horas
+			maxAge: 24 * 60 * 60 * 1000,
 		});
 
 		res.json({
@@ -159,7 +158,6 @@ app.post("/api/auth/login", async (req, res) => {
 	}
 });
 
-// Ruta para cerrar sesión
 app.post("/api/auth/logout", (req, res) => {
 	res.clearCookie("token");
 	res.json({
@@ -168,7 +166,6 @@ app.post("/api/auth/logout", (req, res) => {
 	});
 });
 
-// Ruta para verificar sesión
 app.get("/api/auth/verify", verifyToken, (req, res) => {
 	res.json({
 		success: true,
@@ -176,7 +173,6 @@ app.get("/api/auth/verify", verifyToken, (req, res) => {
 	});
 });
 
-// Ruta para recuperación de contraseña (placeholder)
 app.post("/api/auth/recover", async (req, res) => {
 	try {
 		const { email } = req.body;
@@ -187,13 +183,11 @@ app.post("/api/auth/recover", async (req, res) => {
 			});
 		}
 
-		// Verificar si el usuario existe
 		const userQuery =
 			"SELECT * FROM usuarios WHERE email = $1";
 		const userResult = await pool.query(userQuery, [email]);
 
 		if (userResult.rows.length === 0) {
-			// Por seguridad, no revelamos si el email existe o no
 			return res.json({
 				success: true,
 				message:
@@ -201,8 +195,6 @@ app.post("/api/auth/recover", async (req, res) => {
 			});
 		}
 
-		// Aquí implementarías el envío de email de recuperación
-		// Por ahora solo simulamos la respuesta
 		console.log(`Solicitud de recuperación para: ${email}`);
 
 		res.json({
@@ -218,7 +210,6 @@ app.post("/api/auth/recover", async (req, res) => {
 	}
 });
 
-// Cambiar contraseña
 app.post("/api/auth/change-password", async (req, res) => {
 	try {
 		const { email, currentPassword, newPassword } =
@@ -234,7 +225,7 @@ app.post("/api/auth/change-password", async (req, res) => {
 					"La nueva contraseña debe tener al menos 6 caracteres",
 			});
 		}
-		// Buscar usuario
+
 		const userQuery =
 			"SELECT * FROM usuarios WHERE email = $1";
 		const userResult = await pool.query(userQuery, [email]);
@@ -244,7 +235,7 @@ app.post("/api/auth/change-password", async (req, res) => {
 				.json({ error: "Credenciales inválidas" });
 		}
 		const user = userResult.rows[0];
-		// Verificar contraseña actual
+
 		const isValidPassword = await bcrypt.compare(
 			currentPassword,
 			user.password
@@ -254,7 +245,7 @@ app.post("/api/auth/change-password", async (req, res) => {
 				.status(401)
 				.json({ error: "Credenciales inválidas" });
 		}
-		// Actualizar contraseña
+
 		const hashedPassword = await bcrypt.hash(
 			newPassword,
 			10
@@ -263,6 +254,7 @@ app.post("/api/auth/change-password", async (req, res) => {
 			"UPDATE usuarios SET password = $1, updated_at = NOW() WHERE id = $2",
 			[hashedPassword, user.id]
 		);
+
 		res.json({
 			success: true,
 			message: "Contraseña cambiada exitosamente",
@@ -275,7 +267,7 @@ app.post("/api/auth/change-password", async (req, res) => {
 	}
 });
 
-// Rutas protegidas - requieren autenticación
+// Protected routes
 app.get("/", (req, res) => {
 	const token = req.cookies.token;
 	if (token) {
@@ -286,39 +278,41 @@ app.get("/", (req, res) => {
 			res.clearCookie("token");
 		}
 	}
-	res.sendFile(
-		path.join(__dirname, "public", "login.html")
-	);
+	res.redirect("/login.html");
 });
 
 app.get("/index.html", requireAuth, (req, res) => {
-	res.sendFile(
-		path.join(__dirname, "public", "index.html")
-	);
+	// For Vercel, send the HTML content directly
+	if (process.env.VERCEL) {
+		const fs = require("fs");
+		const indexPath = path.join(
+			__dirname,
+			"public",
+			"index.html"
+		);
+		const indexContent = fs.readFileSync(indexPath, "utf8");
+		res.send(indexContent);
+	} else {
+		res.sendFile(
+			path.join(__dirname, "public", "index.html")
+		);
+	}
 });
 
-// Rutas públicas
-app.get("/index.html", (req, res) => {
-	res.sendFile(
-		path.join(__dirname, "public", "index.html")
-	);
-});
-
-// API para obtener datos de sensores (protegida)
+// API for sensor data (protected)
 app.get("/api/sensors", verifyToken, (req, res) => {
-	// Aquí podrías implementar la lógica para obtener datos de sensores
 	res.json({
 		message: "Datos de sensores",
 		user: req.user,
 	});
 });
 
-// Middleware para manejar rutas no encontradas
+// 404 handler
 app.use("*", (req, res) => {
 	res.status(404).json({ error: "Ruta no encontrada" });
 });
 
-// Función para crear tabla de usuarios si no existe
+// Database initialization
 async function initializeDatabase() {
 	try {
 		const createTableQuery = `
@@ -335,7 +329,6 @@ async function initializeDatabase() {
 		await pool.query(createTableQuery);
 		console.log("✅ Tabla usuarios verificada/creada");
 
-		// Crear usuario de prueba si no existe
 		const testUserEmail = "admin@test.com";
 		const checkUserQuery =
 			"SELECT * FROM usuarios WHERE email = $1";
@@ -369,7 +362,7 @@ async function initializeDatabase() {
 	}
 }
 
-// Inicializar servidor
+// Start server
 app.listen(PORT, async () => {
 	await initializeDatabase();
 	console.log(
@@ -380,7 +373,7 @@ app.listen(PORT, async () => {
 	);
 });
 
-// Manejo de errores no capturados
+// Error handlers
 process.on("unhandledRejection", (err, promise) => {
 	console.error("❌ Unhandled Promise Rejection:", err);
 });
@@ -389,3 +382,6 @@ process.on("uncaughtException", (err) => {
 	console.error("❌ Uncaught Exception:", err);
 	process.exit(1);
 });
+
+// Export for Vercel
+module.exports = app;
