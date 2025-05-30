@@ -37,8 +37,15 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname)));
-app.use("/assets", express.static("assets"));
+app.use(express.static(path.join(__dirname, "public")));
+app.use(
+	"/assets",
+	express.static(path.join(__dirname, "public", "assets"))
+);
+app.use(
+	"/js",
+	express.static(path.join(__dirname, "public", "js"))
+);
 
 // Middleware para verificar JWT
 const verifyToken = (req, res, next) => {
@@ -270,11 +277,15 @@ app.post("/api/auth/change-password", async (req, res) => {
 
 // Rutas protegidas - requieren autenticación
 app.get("/", requireAuth, (req, res) => {
-	res.sendFile(path.join(__dirname, "index.html"));
+	res.sendFile(
+		path.join(__dirname, "public", "login.html")
+	);
 });
 
 app.get("/index.html", requireAuth, (req, res) => {
-	res.sendFile(path.join(__dirname, "index.html"));
+	res.sendFile(
+		path.join(__dirname, "public", "index.html")
+	);
 });
 
 // Rutas públicas
@@ -290,7 +301,9 @@ app.get("/login.html", (req, res) => {
 			res.clearCookie("token");
 		}
 	}
-	res.sendFile(path.join(__dirname, "login.html"));
+	res.sendFile(
+		path.join(__dirname, "public", "login.html")
+	);
 });
 
 // API para obtener datos de sensores (protegida)
