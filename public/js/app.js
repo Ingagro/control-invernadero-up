@@ -1,5 +1,78 @@
-const AIO_USERNAME = window.AIO_USERNAME;
-const AIO_KEY = window.AIO_KEY;
+// Configuration loading with multiple fallbacks
+let AIO_USERNAME = null;
+let AIO_KEY = null;
+let configLoaded = false;
+
+// Function to load configuration
+async function loadConfig() {
+	// First try: window variables (injected by server)
+	if (window.AIO_USERNAME && window.AIO_KEY) {
+		AIO_USERNAME = window.AIO_USERNAME;
+		AIO_KEY = window.AIO_KEY;
+		configLoaded = true;
+		console.log(
+			"Configuration loaded from window variables"
+		);
+		return true;
+	}
+
+	// Second try: API endpoint
+	try {
+		const response = await fetch("/api/config");
+		if (response.ok) {
+			const config = await response.json();
+			AIO_USERNAME = config.AIO_USERNAME;
+			AIO_KEY = config.AIO_KEY;
+			configLoaded = true;
+			console.log("Configuration loaded from API");
+			return true;
+		}
+	} catch (error) {
+		console.error("Error fetching config from API:", error);
+	}
+
+	// Configuration failed to load
+	console.error(
+		"Failed to load configuration from all sources"
+	);
+	return false;
+}
+
+// Wait for configuration before starting
+async function initializeApp() {
+	const configSuccess = await loadConfig();
+	if (configSuccess && configLoaded) {
+		cargarDatosIniciales();
+		conectarMQTT();
+	} else {
+		console.error(
+			"Application failed to initialize: Configuration could not be loaded"
+		);
+		// Show user-friendly error message
+		document.body.innerHTML = `
+			<div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-family: Arial, sans-serif;">
+				<div style="text-align: center; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #f9f9f9;">
+					<h2 style="color: #d32f2f;">Error de Configuración</h2>
+					<p>No se pudo cargar la configuración del sistema.</p>
+					<p>Por favor, contacte al administrador o intente recargar la página.</p>
+					<button onclick="window.location.reload()" style="padding: 10px 20px; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer;">
+						Recargar Página
+					</button>
+				</div>
+			</div>
+		`;
+	}
+}
+
+// Start the app when DOM is ready
+if (document.readyState === "loading") {
+	document.addEventListener(
+		"DOMContentLoaded",
+		initializeApp
+	);
+} else {
+	initializeApp();
+}
 
 const feeds = {
 	temp1: "temperatura-1",
@@ -484,6 +557,3 @@ async function cargarDatosIniciales() {
 	);
 	await updateElement("estadoExtractor", feeds.extractor);
 }
-
-cargarDatosIniciales();
-conectarMQTT();

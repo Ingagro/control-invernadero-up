@@ -287,17 +287,16 @@ app.get("/index.html", requireAuth, (req, res) => {
 	);
 	let indexContent = fs.readFileSync(indexPath, "utf8");
 
-	// Inject environment variables
+	// Always inject environment variables before closing head tag
 	const envScript = `
-		<script>
-			window.AIO_USERNAME = "${process.env.AIO_USERNAME}";
-			window.AIO_KEY = "${process.env.AIO_KEY}";
-		</script>`;
+	<script>
+		window.AIO_USERNAME = "${process.env.AIO_USERNAME}";
+		window.AIO_KEY = "${process.env.AIO_KEY}";
+	</script>`;
 
-	// Replace the existing hardcoded script with environment variables
 	indexContent = indexContent.replace(
-		/<script>\s*window\.AIO_USERNAME\s*=\s*"[^"]*";\s*window\.AIO_KEY\s*=\s*"[^"]*";\s*<\/script>/,
-		envScript
+		"</head>",
+		envScript + "\n</head>"
 	);
 
 	res.send(indexContent);
@@ -312,17 +311,18 @@ app.get("/login.html", (req, res) => {
 	);
 	let loginContent = fs.readFileSync(loginPath, "utf8");
 
-	// Inject environment variables
+	// Always inject environment variables before closing head tag
 	const envScript = `
-		<script>
-			window.AIO_USERNAME = "${process.env.AIO_USERNAME}";
-			window.AIO_KEY = "${process.env.AIO_KEY}";
-		</script>`;
+	<script>
+		window.AIO_USERNAME = "${
+			process.env.AIO_USERNAME || "Ingagro"
+		}";
+		window.AIO_KEY = "${process.env.AIO_KEY}";
+	</script>`;
 
-	// Replace the existing hardcoded script with environment variables
 	loginContent = loginContent.replace(
-		/<script>\s*window\.AIO_USERNAME\s*=\s*"[^"]*";\s*window\.AIO_KEY\s*=\s*"[^"]*";\s*<\/script>/,
-		envScript
+		"</head>",
+		envScript + "\n</head>"
 	);
 
 	res.send(loginContent);
@@ -333,6 +333,14 @@ app.get("/api/sensors", verifyToken, (req, res) => {
 	res.json({
 		message: "Datos de sensores",
 		user: req.user,
+	});
+});
+
+// API endpoint to get environment variables
+app.get("/api/config", (req, res) => {
+	res.json({
+		AIO_USERNAME: process.env.AIO_USERNAME || "Ingagro",
+		AIO_KEY: process.env.AIO_KEY,
 	});
 });
 
