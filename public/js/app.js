@@ -1,5 +1,5 @@
-const AIO_USERNAME = "Ingagro";
-const AIO_KEY = "aio_KLoL0158BzeNxpuErdN2q3h98q9H";
+const AIO_USERNAME = window.AIO_USERNAME;
+const AIO_KEY = window.AIO_KEY;
 
 const feeds = {
 	temp1: "temperatura-1",

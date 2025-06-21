@@ -2,10 +2,8 @@ const bcrypt = require("bcryptjs");
 const { Pool } = require("pg");
 require("dotenv").config();
 
-
 const pool = new Pool({
-	connectionString:
-		"postgresql://neondb_owner:npg_Ft0ivd1LHWMb@ep-cold-pine-a854cclj-pooler.eastus2.azure.neon.tech/neondb?sslmode=require",
+	connectionString: process.env.DATABASE_URL,
 	ssl: {
 		rejectUnauthorized: false,
 	},
@@ -13,7 +11,6 @@ const pool = new Pool({
 
 async function addUser(email, password, nombre) {
 	try {
-
 		const checkUserQuery =
 			"SELECT * FROM usuarios WHERE email = $1";
 		const existingUser = await pool.query(checkUserQuery, [
@@ -24,9 +21,7 @@ async function addUser(email, password, nombre) {
 			return;
 		}
 
-
 		const hashedPassword = await bcrypt.hash(password, 10);
-
 
 		const insertUserQuery = `
       INSERT INTO usuarios (email, password, nombre)
@@ -39,14 +34,12 @@ async function addUser(email, password, nombre) {
 			hashedPassword,
 			nombre,
 		]);
-
 	} catch (error) {
 		console.error("❌ Error creando usuario:", error);
 	} finally {
 		await pool.end();
 	}
 }
-
 
 const args = process.argv.slice(2);
 
@@ -61,7 +54,6 @@ if (args.length < 3) {
 }
 
 const [email, password, nombre] = args;
-
 
 if (!email.includes("@")) {
 	process.exit(1);

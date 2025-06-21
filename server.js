@@ -10,15 +10,12 @@ require("dotenv").config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// JWT Secret - In production, use environment variable
-const JWT_SECRET =
-	process.env.JWT_SECRET ||
-	"your-super-secret-jwt-key-change-this-in-production";
+// JWT Secret - Use environment variable
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // PostgreSQL connection
 const pool = new Pool({
-	connectionString:
-		"postgresql://neondb_owner:npg_Ft0ivd1LHWMb@ep-cold-pine-a854cclj-pooler.eastus2.azure.neon.tech/neondb?sslmode=require",
+	connectionString: process.env.DATABASE_URL,
 	ssl: {
 		rejectUnauthorized: false,
 	},
@@ -282,21 +279,53 @@ app.get("/", (req, res) => {
 });
 
 app.get("/index.html", requireAuth, (req, res) => {
-	// For Vercel, send the HTML content directly
-	if (process.env.VERCEL) {
-		const fs = require("fs");
-		const indexPath = path.join(
-			__dirname,
-			"public",
-			"index.html"
-		);
-		const indexContent = fs.readFileSync(indexPath, "utf8");
-		res.send(indexContent);
-	} else {
-		res.sendFile(
-			path.join(__dirname, "public", "index.html")
-		);
-	}
+	const fs = require("fs");
+	const indexPath = path.join(
+		__dirname,
+		"public",
+		"index.html"
+	);
+	let indexContent = fs.readFileSync(indexPath, "utf8");
+
+	// Inject environment variables
+	const envScript = `
+		<script>
+			window.AIO_USERNAME = "${process.env.AIO_USERNAME}";
+			window.AIO_KEY = "${process.env.AIO_KEY}";
+		</script>`;
+
+	// Replace the existing hardcoded script with environment variables
+	indexContent = indexContent.replace(
+		/<script>\s*window\.AIO_USERNAME\s*=\s*"[^"]*";\s*window\.AIO_KEY\s*=\s*"[^"]*";\s*<\/script>/,
+		envScript
+	);
+
+	res.send(indexContent);
+});
+
+app.get("/login.html", (req, res) => {
+	const fs = require("fs");
+	const loginPath = path.join(
+		__dirname,
+		"public",
+		"login.html"
+	);
+	let loginContent = fs.readFileSync(loginPath, "utf8");
+
+	// Inject environment variables
+	const envScript = `
+		<script>
+			window.AIO_USERNAME = "${process.env.AIO_USERNAME}";
+			window.AIO_KEY = "${process.env.AIO_KEY}";
+		</script>`;
+
+	// Replace the existing hardcoded script with environment variables
+	loginContent = loginContent.replace(
+		/<script>\s*window\.AIO_USERNAME\s*=\s*"[^"]*";\s*window\.AIO_KEY\s*=\s*"[^"]*";\s*<\/script>/,
+		envScript
+	);
+
+	res.send(loginContent);
 });
 
 // API for sensor data (protected)
