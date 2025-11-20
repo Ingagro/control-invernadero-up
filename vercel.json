@@ -3,7 +3,10 @@
     "builds": [
         {
             "src": "server.js",
-            "use": "@vercel/node"
+            "use": "@vercel/node",
+            "config": {
+                "includeFiles": ["public/**"]
+            }
         },
         {
             "src": "public/**",
@@ -24,12 +27,12 @@
             "dest": "/public/js/$1"
         },
         {
-            "src": "/(.+\\.(css|js|png|jpg|jpeg|gif|ico|svg))",
+            "src": "/(.+\\.(css|png|jpg|jpeg|gif|ico|svg))",
             "dest": "/public/$1"
         },
         {
             "src": "/login.html",
-            "dest": "/public/login.html"
+            "dest": "/server.js"
         },
         {
             "src": "/index.html",

@@ -342,11 +342,18 @@ async function initializeDatabase() {
 }
 
 // Start server
-app.listen(PORT, async () => {
-  await initializeDatabase();
-  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
-  console.log(`📝 Login en: http://localhost:${PORT}/login.html`);
-});
+if (require.main === module) {
+  app.listen(PORT, async () => {
+    await initializeDatabase();
+    console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+    console.log(`📝 Login en: http://localhost:${PORT}/login.html`);
+  });
+} else {
+  // Initialize database when running as a module (e.g., Vercel)
+  initializeDatabase().catch((err) =>
+    console.error("❌ Error initializing database:", err)
+  );
+}
 
 // Error handlers
 process.on("unhandledRejection", (err, promise) => {
