@@ -1,0 +1,35 @@
+[build]
+  functions = "functions"
+  publish = "public"
+
+[functions]
+  included_files = ["public/index.html", "public/login.html"]
+
+# Redirect API requests to the function
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api"
+  status = 200
+  force = true
+
+# Redirect specific pages to the function to allow environment variable injection
+[[redirects]]
+  from = "/login.html"
+  to = "/.netlify/functions/api"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/index.html"
+  to = "/.netlify/functions/api"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/"
+  to = "/.netlify/functions/api"
+  status = 200
+  force = true
+
+# Static assets (js, css, images) will be served directly from the 'public' folder
+# because they are not matched by the above redirects (except if they fall under /api, which they shouldn't)

@@ -31,12 +31,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Static files middleware - only for local development
-if (process.env.NODE_ENV !== "production") {
-  app.use(express.static(path.join(__dirname, "public")));
-  app.use("/assets", express.static(path.join(__dirname, "public", "assets")));
-  app.use("/js", express.static(path.join(__dirname, "public", "js")));
-}
+// Static files middleware
+// In production (Netlify/Vercel), static files are served by the platform, 
+// but we still need this for the function to find the files when reading them with fs
+app.use(express.static(path.join(__dirname, "public")));
+app.use("/assets", express.static(path.join(__dirname, "public", "assets")));
+app.use("/js", express.static(path.join(__dirname, "public", "js")));
 
 // Middleware para verificar JWT
 const verifyToken = (req, res, next) => {
