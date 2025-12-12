@@ -90,8 +90,24 @@ const feeds = {
 const mqttBrokerUrl = "wss://io.adafruit.com:443/mqtt";
 let mqttClient = null;
 
+// Adafruit IO / device wiring can be active-low (reported state inverted).
+// We only flip the VISUAL state for actuators so the UI matches what the user expects.
+function toUiActuatorState(value) {
+	const v = String(value ?? "").trim().toUpperCase();
+	if (v === "ON") return "OFF";
+	if (v === "OFF") return "ON";
+	return value;
+}
+
 function conectarMQTT() {
 	if (mqttClient && mqttClient.connected) {
+		return;
+	}
+
+	if (!AIO_USERNAME || !AIO_KEY) {
+		console.error(
+			"MQTT connection skipped: missing AIO_USERNAME/AIO_KEY (config not loaded yet?)"
+		);
 		return;
 	}
 
@@ -190,44 +206,47 @@ function conectarMQTT() {
 					messageValue + " %";
 
 			if (feedAioKeyFromTopic === feeds.nebulizadores) {
+				const uiState = toUiActuatorState(messageValue);
 				document.getElementById(
 					"estadoNebulizadores"
-				).textContent = messageValue;
+				).textContent = uiState;
 				if (
 					document.getElementById("modoSelect").value ===
 					"manual"
 				) {
 					actualizarBotonesControl(
 						"nebulizadores",
-						messageValue
+						uiState
 					);
 				}
 			}
 			if (feedAioKeyFromTopic === feeds.ventiladores) {
+				const uiState = toUiActuatorState(messageValue);
 				document.getElementById(
 					"estadoVentiladores"
-				).textContent = messageValue;
+				).textContent = uiState;
 				if (
 					document.getElementById("modoSelect").value ===
 					"manual"
 				) {
 					actualizarBotonesControl(
 						"ventiladores",
-						messageValue
+						uiState
 					);
 				}
 			}
 			if (feedAioKeyFromTopic === feeds.extractor) {
+				const uiState = toUiActuatorState(messageValue);
 				document.getElementById(
 					"estadoExtractor"
-				).textContent = messageValue;
+				).textContent = uiState;
 				if (
 					document.getElementById("modoSelect").value ===
 					"manual"
 				) {
 					actualizarBotonesControl(
 						"extractor",
-						messageValue
+						uiState
 					);
 				}
 			}
@@ -290,6 +309,16 @@ function conectarMQTT() {
 
 async function enviarControl(actuador, estado) {
 	try {
+		if (!configLoaded) {
+			await loadConfig();
+		}
+		if (!AIO_USERNAME || !AIO_KEY) {
+			console.error(
+				"No se pudo enviar el comando: configuración AIO no disponible"
+			);
+			return;
+		}
+
 		const feedKey = feeds[actuador];
 		const url = `https://io.adafruit.com/api/v2/${AIO_USERNAME}/feeds/${feedKey}/data`;
 
@@ -391,6 +420,12 @@ function capitalizar(str) {
 
 function cambiarModo() {
 	const modo = document.getElementById("modoSelect").value;
+	if (!AIO_USERNAME || !AIO_KEY) {
+		console.error(
+			"No se pudo cambiar el modo: configuración AIO no disponible"
+		);
+		return;
+	}
 	const url = `https://io.adafruit.com/api/v2/${AIO_USERNAME}/feeds/${feeds.modo}/data`;
 
 	const botones = document.querySelectorAll(
@@ -411,7 +446,7 @@ function cambiarModo() {
 				if (estados[actuador] !== "No disponible") {
 					actualizarBotonesControl(
 						actuador,
-						estados[actuador]
+						toUiActuatorState(estados[actuador])
 					);
 				}
 			}
@@ -489,7 +524,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 			if (estados[actuador] !== "No disponible") {
 				actualizarBotonesControl(
 					actuador,
-					estados[actuador]
+					toUiActuatorState(estados[actuador])
 				);
 			}
 		}
@@ -498,6 +533,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 async function obtenerDato(feed) {
 	try {
+		// This can be called very early on DOMContentLoaded; ensure config is loaded first.
+		if (!configLoaded) {
+			await loadConfig();
+		}
+		if (!AIO_USERNAME || !AIO_KEY) {
+			return "No disponible";
+		}
+
 		const url = `https://io.adafruit.com/api/v2/${AIO_USERNAME}/feeds/${feed}/data/last`;
 		const res = await fetch(url, {
 			headers: {
@@ -528,11 +571,15 @@ async function cargarDatosIniciales() {
 	const updateElement = async (
 		elementId,
 		feedKey,
-		suffix = ""
+		suffix = "",
+		transform = null
 	) => {
 		const element = document.getElementById(elementId);
 		if (element) {
-			const value = await obtenerDato(feedKey);
+			let value = await obtenerDato(feedKey);
+			if (typeof transform === "function") {
+				value = transform(value);
+			}
 			element.textContent = value + suffix;
 		} else {
 			console.warn(
@@ -549,11 +596,20 @@ async function cargarDatosIniciales() {
 	await updateElement("suelo2", feeds.suelo2, " %");
 	await updateElement(
 		"estadoNebulizadores",
-		feeds.nebulizadores
+		feeds.nebulizadores,
+		"",
+		toUiActuatorState
 	);
 	await updateElement(
 		"estadoVentiladores",
-		feeds.ventiladores
+		feeds.ventiladores,
+		"",
+		toUiActuatorState
 	);
-	await updateElement("estadoExtractor", feeds.extractor);
+	await updateElement(
+		"estadoExtractor",
+		feeds.extractor,
+		"",
+		toUiActuatorState
+	);
 }
