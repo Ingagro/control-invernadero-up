@@ -90,13 +90,39 @@ const feeds = {
 const mqttBrokerUrl = "wss://io.adafruit.com:443/mqtt";
 let mqttClient = null;
 
-// Adafruit IO / device wiring can be active-low (reported state inverted).
-// We only flip the VISUAL state for actuators so the UI matches what the user expects.
-function toUiActuatorState(value) {
+// Adafruit IO / relay modules are often ACTIVE-LOW.
+// If true:
+// - Raw feed value ON means device is actually OFF
+// - UI ON should send raw OFF
+const INVERT_ACTUATOR_LOGIC = true;
+
+function invertOnOff(value) {
 	const v = String(value ?? "").trim().toUpperCase();
 	if (v === "ON") return "OFF";
 	if (v === "OFF") return "ON";
 	return value;
+}
+
+function isActuator(actuador) {
+	return (
+		actuador === "nebulizadores" ||
+		actuador === "ventiladores" ||
+		actuador === "extractor"
+	);
+}
+
+// Convert raw feed value -> UI value
+function toUiActuatorState(rawValue) {
+	return INVERT_ACTUATOR_LOGIC
+		? invertOnOff(rawValue)
+		: rawValue;
+}
+
+// Convert UI intended value -> raw feed value to send
+function toRawActuatorCommand(uiValue) {
+	return INVERT_ACTUATOR_LOGIC
+		? invertOnOff(uiValue)
+		: uiValue;
 }
 
 function conectarMQTT() {
@@ -321,6 +347,9 @@ async function enviarControl(actuador, estado) {
 
 		const feedKey = feeds[actuador];
 		const url = `https://io.adafruit.com/api/v2/${AIO_USERNAME}/feeds/${feedKey}/data`;
+		const rawEstadoToSend = isActuator(actuador)
+			? toRawActuatorCommand(estado)
+			: estado;
 
 		if (actuador === "nebulizadores")
 			document.getElementById(
@@ -343,7 +372,7 @@ async function enviarControl(actuador, estado) {
 				"X-AIO-Key": AIO_KEY,
 				"Content-Type": "application/json",
 			},
-			body: JSON.stringify({ value: estado }),
+			body: JSON.stringify({ value: rawEstadoToSend }),
 		});
 
 		if (res.ok) {
